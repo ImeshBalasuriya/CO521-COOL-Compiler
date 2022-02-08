@@ -44,7 +44,7 @@ extern YYSTYPE cool_yylval;
 /*
  *  Add Your own definitions here
  */
-int nestCount, bracketCount;
+int nestCount;
 
 
 %}
@@ -82,7 +82,7 @@ FALSE			[f](?i:alse)
 DIGITS			[0-9]+
 
 
-%x INLINECOMMENT NESTEDCOMMENT STRING
+%x INLINECOMMENT NESTEDCOMMENT STRING STRERROR
 
 %%
 
@@ -206,8 +206,8 @@ DIGITS			[0-9]+
 <STRING>\\.			{ 
 				  if (string_len >= MAX_STR_CONST) {
 					cool_yylval.error_msg = "String constant too long";
-					BEGIN (INITIAL);
-					return (ERROR);
+					BEGIN (STRERROR);
+			  		return (ERROR);
 				  }
 
 				  switch (*(yytext+1)) {
@@ -244,8 +244,8 @@ DIGITS			[0-9]+
 <STRING>[^\n\t\b\f\0\"]		{ 
 				  if (string_len >= MAX_STR_CONST) {
 					cool_yylval.error_msg = "String constant too long";
-					BEGIN (INITIAL);
-					return (ERROR);
+					BEGIN (STRERROR);
+			  		return (ERROR);
 				  }
 
 				  *(string_buf_ptr++) = *yytext; 
@@ -265,7 +265,7 @@ DIGITS			[0-9]+
  /* String literal cannot contain null char */
 <STRING>\0			{
 				  cool_yylval.error_msg = "String contains null character";
-				  BEGIN (INITIAL);
+				  BEGIN (STRERROR);
 				  return (ERROR);
 				}
 
@@ -277,8 +277,8 @@ DIGITS			[0-9]+
 						
 				  if (string_len >= MAX_STR_CONST) {
 					cool_yylval.error_msg = "String constant too long";
-					BEGIN (INITIAL);
-					return (ERROR);
+					BEGIN (STRERROR);
+			  		return (ERROR);
 				  }
 
 				  *(string_buf_ptr++) = '\n';
@@ -290,6 +290,17 @@ DIGITS			[0-9]+
 			  cool_yylval.error_msg = "EOF in string constant";
 			  BEGIN (INITIAL);
 			  return (ERROR);
+			}
+
+ /* If lexer finds error in string literal, eat up rest of string until end of string */
+<STRERROR>.*\"		{
+			  BEGIN (INITIAL);
+			}
+
+<STRERROR>.*\n		{
+			  curr_lineno++;	/* Increment line number upon newline */
+
+			  BEGIN (INITIAL);
 			}
 		
 
@@ -323,14 +334,15 @@ DIGITS			[0-9]+
 				}
 
 
- /* Type and Object Identifiers */
+ /* Type Identifiers */
 [A-Z][a-zA-Z0-9_]+			{
-				  cool_yylval.symbol = stringtable.add_string(yytext);
+				  cool_yylval.symbol = idtable.add_string(yytext);
 				  return (TYPEID);
 				}
 
+ /* Object Identifiers */
 [a-z][a-zA-Z0-9_]+			{
-				  cool_yylval.symbol = stringtable.add_string(yytext);
+				  cool_yylval.symbol = idtable.add_string(yytext);
 				  return (OBJECTID);
 				}
 				
