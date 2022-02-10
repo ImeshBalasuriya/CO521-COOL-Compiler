@@ -1,11 +1,17 @@
 /*
+ * CO521 - Compilers
+ * Group: 06
+ * Members: Rupasinghe R.H. (E/17/296), Balasuriya I.S. (E/17/018)
+ */
+
+/*
  *  The scanner definition for COOL.
  */
 
 /*
  *  Stuff enclosed in %{ %} in the first section is copied verbatim to the
  *  output, so headers and global definitions are placed here to be visible
- * to the code in the file.  Don't remove anything that was here initially
+ *  to the code in the file.  Don't remove anything that was here initially
  */
 %{
 #include <cool-parse.h>
@@ -270,27 +276,19 @@ DIGITS			[0-9]+
 				}
 
 
- /* ASK ABOUT THIS: Lexer should eat escaped newline(?) */
- /* If escaped newline is found, add newline to string literal */
-<STRING>\\[\n]			{ 
-				  curr_lineno++;	/* Increment line number upon newline */
-						
-				  if (string_len >= MAX_STR_CONST) {
-					cool_yylval.error_msg = "String constant too long";
-					BEGIN (STRERROR);
-			  		return (ERROR);
-				  }
+ /* Deviation from reference lexer */
+ /* If escaped newline is found, eat it up and continue with string literal */
+<STRING>\\[\n]			{ curr_lineno++; }	/* Increment line number upon newline */
 
-				  *(string_buf_ptr++) = '\n';
- 
-				  string_len++;
-				}
 
+
+ /* Meeting EOF while in the STRING condition will raise error */
 <STRING><<EOF>>		{
 			  cool_yylval.error_msg = "EOF in string constant";
 			  BEGIN (INITIAL);
 			  return (ERROR);
 			}
+
 
  /* If lexer finds error in string literal, eat up rest of string until end of string */
 <STRERROR>.*\"		{
@@ -335,13 +333,13 @@ DIGITS			[0-9]+
 
 
  /* Type Identifiers */
-[A-Z][a-zA-Z0-9_]+			{
+[A-Z][a-zA-Z0-9_]*			{
 				  cool_yylval.symbol = idtable.add_string(yytext);
 				  return (TYPEID);
 				}
 
  /* Object Identifiers */
-[a-z][a-zA-Z0-9_]+			{
+[a-z][a-zA-Z0-9_]*			{
 				  cool_yylval.symbol = idtable.add_string(yytext);
 				  return (OBJECTID);
 				}
