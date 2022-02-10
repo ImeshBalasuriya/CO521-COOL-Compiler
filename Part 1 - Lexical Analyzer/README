@@ -127,11 +127,21 @@ while in the NESTEDCOMMENT start condition. It must be noted that reaching EOF w
 we have added an extra rule that generates the error "EOF in comment" if the lexer runs into EOF while in the NESTEDCOMMENT start condition.
 Encountering a *) without having entered a multiline comment will also generate an error "Unmatched *)". 
 
-String literals: 
+String literals: The lexer begins assembling a string literal once it encounters a " token by entering the STRING start condition. At this stage, the temporary buffer used for string assembly 'string_buf'
+is flushed and the string length counter is set to zero. 
+While in the string, meeting any character that is acceptable in a string according to the Cool specification will add it to the string_buf and increment the string_len variable. A check is done before adding
+a character to the buffer to see if the string length exceeds the maximum character limit and the lexer generates an error in such cases. 
+Cool permits having escaped characters within strings in the form '\c', where '\b', '\f', '\n', '\t', and '\0' refer to backspace, formfeed, newline, tab and null-character respectively and any other '\c' refers to the character 'c' itself.
+This was implemented by having a rule that matches all character tokens with a preceding '\' and using a case statement to assemble the special escaped characters in their correct forms and the other escaped characters as just the character.
+As usual the string length was incremented and a string length check was done before assembling.
+Cool string literals can also have newlines escaped by a preceding '\' to break off the string literal to multiple lines. In such cases, the lexer will eat up the escaped newline and continue scanning the string as usual from the next line. It must
+be noted here that this is NOT how the reference lexer behaves. The reference lexer adds a newline character '\n' to the string before continuing to scan from the next line. We decided to deviate from this behaviour since it seems redundant given that
+intentional newlines can be added to string literals by having the characters '\' 'n' within the string. Instead we decided to implement the behaviour of conventional programming languages like C as it allows programmers to break off lengthy strings to multiple lines
+to improve code clarity.
 
 Boolean literals (true, false): Cool allows Boolean literals to have both uppercase and lowercase characters as long as the starting character is lowercase (Eg: tRuE is allowed while TruE is not).
 We defined a regex that matches the Boolean literals according to these conditions. Once the lexer matches a Boolean literal, it sets the 'boolean' property of cool_yylval to the
-correspinding Boolean value of the literal and returns the BOOL_CONST enumerated value defined in the 'cool-parse.h' file.
+correspinding Boolean value of the literal and returns the BOOL_CONST enumerated value defined in the 'cool-parse.h' file. 
 
 Integer literals: Cool accepts non-empty strings of the digits 0-9 as integer literals. Therefore, an appropriate regex was defined to match such integers and 
 once the lexer finds a match it sets the 'symbol' property of cool_yylval to the relevant string of digits and returns the INT_CONST enumerated value. To do this efficiently,
@@ -150,6 +160,15 @@ invalid token is returned. This rule was added at the very end of the rule speci
 
 Line numbers: The implemented lexer keeps track of line numbers as it scans the code. This is done by setting up a global variable 'curr_lineno' which is incremented every time the lexer encounters
 a newline character in the code. It is important to note that this increment operation happens even in cases where the lexer generates an error.
+
+
+
+
+
+
+
+
+
 
 	
 
