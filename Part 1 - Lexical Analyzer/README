@@ -223,7 +223,8 @@ Line numbers: The implemented lexer keeps track of line numbers as it scans the 
 the lexer encounters a newline character in the code. It is important to note that this increment operation happens even in cases where the lexer generates an error.
 
 
-
+Testing: The existing test.cl file was modified with additional characters to test the lexer fully. The added code is not syntactically valid but we believe they cover all of 
+the lexical analyzer's functionality adequately since each of the test cases were added to test a single rule of the Flex specification thoroughly.
 
 
 
