@@ -134,6 +134,8 @@
     %type <classes> class_list
     %type <class_> class
     %type <feature> feature
+    %type <features> feature_list
+    %type <features> non_empty_feature_list
     %type <formal> formal
     %type <formals> formal_list
     %type <case_> case_
@@ -143,12 +145,10 @@
     %type <expressions> block_expr
     %type <expression> opt_init
     %type <expression> let_stmt
-    
-    
-    /* You will want to change the following line. */
-    %type <features> feature_list
+
     
     /* Precedence declarations go here. */
+    %right LET_EXPR
     %right ASSIGN
     %precedence NOT
     %nonassoc LE '<' '='
@@ -198,19 +198,24 @@
 	/* empty */
 	{ $$ = nil_Features(); }
 
-	| feature ';'		/* Single feature */
+	| non_empty_feature_list
+	{ $$ = $1; };
+
+
+    non_empty_feature_list:
+	feature		/* Single feature */
 	{ $$ = single_Features($1); }
 
-	| feature_list feature /* several features */
+	| non_empty_feature_list feature	/* several features */
 	{ $$ = append_Features($1, single_Features($2)); };
 
 
     /* Feature can be an attribute or a method */
     feature:
-	OBJECTID ':' TYPEID opt_init	/* Attributes */
+	OBJECTID ':' TYPEID opt_init ';'	/* Attributes */
 	{ $$ = attr($1, $3, $4); }
 
-	| OBJECTID '(' formal_list ')' ':' TYPEID '{' expression '}'	/* Methods */
+	| OBJECTID '(' formal_list ')' ':' TYPEID '{' expression '}' ';'	/* Methods */
 	{ $$ = method($1, $3, $6, $8); };
 
 
@@ -337,13 +342,13 @@
 	expression ';'		/* Single expression */
 	{ $$ = single_Expressions($1); }
 
-	| block_expr expression 	/* Several expressions */
+	| block_expr expression ';'	/* Several expressions */
 	{ $$ = append_Expressions($1, single_Expressions($2)); };
 
 
     /* Case List */
     case_list:
-	case_ ';'		/* Single Case Statement */
+	case_		/* Single Case Statement */
 	{ $$ = single_Cases($1); }
 
 	| case_list case_	/* Multiple Case Statements */
@@ -352,13 +357,13 @@
 
     /* Case Statements */
     case_:
-	OBJECTID ':' TYPEID DARROW expression
+	OBJECTID ':' TYPEID DARROW expression ';'
 	{ $$ = branch($1, $3, $5); };
 
 
     /* Let Statement */
     let_stmt:
-	OBJECTID ':' TYPEID opt_init IN expression
+	OBJECTID ':' TYPEID opt_init IN expression %prec LET_EXPR
 	{ $$ = let($1, $3, $4, $6); }
 
 	| OBJECTID ':' TYPEID opt_init ',' let_stmt
