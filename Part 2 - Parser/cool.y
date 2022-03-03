@@ -180,8 +180,8 @@
 	{ $$ = append_Classes($1,single_Classes($2)); 
 	  parse_results = $$; 
 	};
-
     
+
     /* If no parent is specified, the class inherits from the Object class. */
     class: 
 	CLASS TYPEID '{' feature_list '}' ';'
@@ -190,7 +190,11 @@
 	}
 
 	| CLASS TYPEID INHERITS TYPEID '{' feature_list '}' ';'
-	{ $$ = class_($2,$4,$6,stringtable.add_string(curr_filename)); };
+	{ $$ = class_($2,$4,$6,stringtable.add_string(curr_filename)); }
+
+	| error ';' /* On error in class definition, move to next class if class is terminated properly */
+	{ };
+    
 
     
     /* Feature list may be empty, but no empty features in list. */
@@ -216,7 +220,10 @@
 	{ $$ = attr($1, $3, $4); }
 
 	| OBJECTID '(' formal_list ')' ':' TYPEID '{' expression '}' ';'	/* Methods */
-	{ $$ = method($1, $3, $6, $8); };
+	{ $$ = method($1, $3, $6, $8); }
+
+	| error ';'	/* Upon error in feature, move to next feature */
+	{ };
 
 
     /* Optional Initialization */
@@ -343,7 +350,10 @@
 	{ $$ = single_Expressions($1); }
 
 	| block_expr expression ';'	/* Several expressions */
-	{ $$ = append_Expressions($1, single_Expressions($2)); };
+	{ $$ = append_Expressions($1, single_Expressions($2)); }
+
+	| error ';'	/* Encountering an error in a terminated block expression moves to the next block expression
+	{ }
 
 
     /* Case List */
@@ -367,7 +377,14 @@
 	{ $$ = let($1, $3, $4, $6); }
 
 	| OBJECTID ':' TYPEID opt_init ',' let_stmt
-	{ $$ = let($1, $3, $4, $6); };
+	{ $$ = let($1, $3, $4, $6); }
+
+	| error	',' let_stmt	/* Upon error in binding, move to next binding */
+	{ }
+
+	| error	IN	/* Upon error in last binding, move to expression */
+	{ };
+
 
 
 	    
