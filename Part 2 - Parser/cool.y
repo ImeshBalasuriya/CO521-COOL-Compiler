@@ -352,7 +352,7 @@
 	| block_expr expression ';'	/* Several expressions */
 	{ $$ = append_Expressions($1, single_Expressions($2)); }
 
-	| error ';'	/* Encountering an error in a terminated block expression moves to the next block expression
+	| error ';'	/* Encountering an error in a terminated block expression moves to the next block expression */
 	{ }
 
 
