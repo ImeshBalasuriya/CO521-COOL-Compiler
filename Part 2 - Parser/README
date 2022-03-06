@@ -141,56 +141,63 @@ Rules for the non-terminals: The definition of the AST nodes are given in cool-t
 	
     2) class_list (Type - classes):
     	A class list can contain either one or more classes.
-    	- If it is a single class we use { Classes single_Classes(Class_); } to create a Classes phylum with a single class. Parse results??
+    	- If it is a single class we use { Classes single_Classes(Class_); } to create a Classes phylum with a single class. 
     	- If it is several classes, we use { Classes append_Classes(Classes, Classes); } and parse results.
     
     3) class (Type - class_):
     	A class is defined as ' class TYPE [inherits TYPE] { [[feature;]]∗} ', where mentioning the inherited class is optional for certain instances and the list of features could be either zero or more.
     	- In cases where inheritance does not take place, the constructor { constructor class_(name : Symbol; parent: Symbol; features : Features; filename : Symbol): Class_; } was used. The required features were
     defined as a feature_list(defined below) and the add_string methods were used in both the idtable(to add "Object") and stringtable(to add the filename).
-    	- In cases where inheritance takes place, the same constructor was used and the add_string method of the strigtable was used once again.
+    	- In cases where inheritance takes place, the same constructor was used and the add_string method of the stringtable was used once again.
+    	- Error handling in a class rule was done by using the special token error, which is a terminal symbol. On encountering an error in a class definition, the error token is used to move to the next class if the class is 
+    terminated properly. 
     
     4) feature_list (Type - features):
     	A feature list can be either empty or not. A feature ends with a ';'.
     	- When the list is empty, we use { Features nil_Features(); } which creates a nil Features phylum.
+    	- When the list is non-empty, we call the non_empty_feature_list rule.
+    
+    5) non_empty_feature_list (Type - features):
+    	The reason for writing two seperate rules for empty and non-empty feature lists was to avoid an unwanted epsilon symbol when parsing.
     	- When the list contains only one feature, it uses { Features single_Features(Feature); } to create a Features phylum with a single feature.
     	- When the list has more than one feature, it uses the prototype { Features append_Features(Features, Features); } and makes recursive calls to the same rule.
     
-    5) feature (Type - feature):
-    	A feature is defined as ' ID( [ formal [[, formal]]∗ ] ) : TYPE { expr } ' or ' ID : TYPE [ <- expr ] ', where the list of formals are optional and the assignment at the end is optional as well.
+    6) feature (Type - feature):
+    	A feature is defined as ' ID( [ formal [[, formal]]∗ ] ) : TYPE { expr } ' or ' ID : TYPE [ <- expr ] ', where the list of formals are optional and the assignment at the end is optional as well. A feature can be
+    either an attribute or a method.
     	- For the first case where the formal list is provided, the constructor { constructor method(name : Symbol; formals : Formals; return_type : Symbol; expr: Expression) : Feature; } was used. The formals needed for
     this constructor is handled by the rule formal_list and the relevant expression is handled by the rule expression.
     	- For the second case where the formal list is not provided and the assignment is optional, the constructor { constructor attr(name, type_decl : Symbol; init : Expression) : Feature; } was used. The status of
-    the assignement is handled by opt_init which is defined as another rule.
-    	 
-    	
-    6) formal_list (Type - formals):
+    the assignement is handled by opt_init(defined below) which is defined as another rule.
+    	- Upon encountering an error, in a feature, we move to the next feature. The error token was used to handle such errors.
+    	    	
+    7) formal_list (Type - formals):
     	A formal list can be either empty or non-empty. 
     	- When the list is empty, we use { Formals nil_Formals(); } which creates a nil Formals phylum.
     	- When the list contains only one formal, it uses { Formals single_Formals(Formal); } to create a Formals phylum with a single formal.
     	- When the list has more than one formal, it uses the prototype { Formals append_Formals(Formals, Formals); } and makes recursive calls to the same rule.
     	
-    7) formal (Type - formal):
+    8) formal (Type - formal):
     	A formal is defined as ' ID : TYPE '.
     	- The constructor { constructor formal(name, type_decl: Symbol) : Formal; } can be used to create a Formal.
     
-    8) case_list (Type - cases):
+    9) case_list (Type - cases):
     	This is the rule for handling multiple ' ID : TYPE => expr; ' statements.
     	- When there is only one instance of this, we call { Cases single_Cases(Case); } which creates a Cases phylum with one case. It should be noticed that a single case ends with a ';'.
     	- When there are multiple instances of this, we call { Cases append_Cases(Cases, Cases); } and makes recursive calls to the same rule.
     
-    9) case_ (Type - case):
+   10) case_ (Type - case):
     	This handles the statement ' ID : TYPE => expr; '. 
     	- The rule uses the constructor { constructor branch(name, type_decl: Symbol; expr: Expression): Case; }.
     
-   10) expr_list (Type - expressions):
+   11) expr_list (Type - expressions):
    		Expressions in Cool can be either nil, single or multiple. Ex: When specifying the defined parameters for a method, there can zero or mutiple values passed for the paramaeters. This rule is 
    	used to convert these types of expressions to Expressions.
    		- When the required expression is nil, we use { Expressions nil_Expressions(); } which creates a nil Expressions phylum.
    		- When we need a single expression, we use { Expressions single_Expressions(Expression); } which creates a Expressions phylum with one expression.
    		- When the required statement includes multiple expressions (comma seperated), we use { Expressions append_Expressions(Expressions, Expressions); } and make recursive calls to the same rule.
    	
-   11) expression (Type - expression):
+   12) expression (Type - expression):
    		There are sevaral ways of defining an expression in Cool. 
    		- The assign statement is defined as ' ID <- expr '. For assign statement expressions, we use the constructor { constructor assign(name : Symbol; expr : Expression) : Expression; } and we make 
    	recursive calls to the same rule for the expression at the end.
@@ -228,29 +235,34 @@ Rules for the non-terminals: The definition of the AST nodes are given in cool-t
    		- Strings are handled by the constructor { constructor string_const(token: Symbol) : Expression; }.
    		- Booleans are handled by the constructor { constructor bool_const(val: Boolean) : Expression; }.
    
-    12) block_expr (Type - expressions):
-    	This rule is used to evaluate the block expressions in the expression rule. They can be either one or more.
+    13) block_expr (Type - expressions):
+    	This rule is used to evaluate the block expressions in the expression rule. They can be either one or more. Within the block, each expression should end in a ';'.
     	- When there is a single expression, we use { Expressions single_Expressions(Expression); } which creates a Expressions phylum with one expression.
-    	- When there are multiple space-separated expressions, we use { Expressions append_Expressions(Expressions, Expressions); } and make recursive calls to the same rule.
+    	- When there are multiple ';'-separated expressions, we use { Expressions append_Expressions(Expressions, Expressions); } and make recursive calls to the same rule.
+    	- Upon encountering an error in a terminated block expression, the parser moves to the next block expression. The special token error is used to handle this.
     
-    13) opt_init (Type - expression):
+    14) opt_init (Type - expression):
     	Used in the definition for the rules feature and let_stmt(defined below). This rule defines the optional assignment opration defined by ' [ <- expr ] '.
     	- When this expression is optional, we use the constructor { constructor no_expr(): Expression; }, which creates a nil Expression phylum.
     	- When this is not optional, we directly return the given expression of phylum Expression.
     
-    14) let_stmt (Type - expression):
+    15) let_stmt (Type - expression):
     	This rule defines the ' ID : TYPE [ <- expr ] [[, ID : TYPE [ <- expr ]]]∗ in expr ' portion of the let statement, where the assignment is optional and there can be nested statements.
-    	- When we have reached the rightmost statement, we use the constructor { constructor let(identifier, type_decl: Symbol; init, body: Expression): Expression; }.
+    	- When we have reached the rightmost statement, we use the constructor { constructor let(identifier, type_decl: Symbol; init, body: Expression): Expression; }. We use '%prec LET_EXPR' to give precedence to
+    the shift opration since we need to reach the rightmost binding in the body of the let statement.
     	- When we have not yet reached the rightmost statement, we recursively call the same rule while using the same constructor.
+    	- Errors will be handled within the bindings of the body of the let statement. Upon encountering an error in a binding, we move to the next binding. When an error is encountered in last binding, we move 
+    to the 'IN expression' portion of the let statement.
 
 
 Precedence: The precedence declarations in Bison are used to define the order of precedence in Cool. We have defined them in the order from the least precedence to the highest. All binary 
 operations are left-associative (defined by '%left'), with the exception of assignment, which is right-associative (defined by '%right'), and the three comparison operations, which do not associate (defined by '%nonassoc').
 The unary operators are defined using '%precedence'.
 
-Error Handling:
+Error Handling: Error handling was performed for the rules defined for classes, let expressions, features and block expressions.
 
-Testing:
+Testing: Two test files were used for testing correct and incorrect Cool code. In good.cl, the tests were done for syntactically correct classes, multiple let statements, expressions, formals, features, and block expressions.
+In bad.cl, the tests were carried out to detect no-error situations, invalid type identifiers, invalid object identifiers, invalid methods, incorrect let bindings, invalid block expressions, invalid keywords, and missing braces.
 
 
 
